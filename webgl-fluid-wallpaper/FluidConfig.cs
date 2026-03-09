@@ -8,6 +8,7 @@ namespace webgl_fluid_wallpaper
 {
     public class FluidConfig
     {
+        public string Quality { get; set; }
         public string Resolution { get; set; }
         public float DensityDiffusion { get; set; }
         public float VelocityDiffusion { get; set; }

@@ -86,13 +86,25 @@ let config = {
     SUNRAYS_WEIGHT: 1.0,
 }
 
+const qualityMap = {
+    "high": 1024,
+    "medium": 512,
+    "low": 256,
+    "very low": 128
+};
+
+const simResMap = {
+    "32": 32,
+    "64": 64,
+    "128": 128,
+    "256": 256
+};
 fetch("https://wallpaper/config.json")
     .then(res => res.json())
     .then(cfg => {
         console.log("Loaded config.json:", cfg);
-
-        config.SIM_RESOLUTION = cfg.Resolution || 256;
-        config.DYE_RESOLUTION = cfg.Quality === "high" ? 1024 : 512;
+        config.SIM_RESOLUTION = simResMap[cfg.Resolution] || 256;
+        config.DYE_RESOLUTION = qualityMap[cfg.Quality] || 1024;
         config.DENSITY_DISSIPATION = parseFloat(cfg.DensityDiffusion);
         config.VELOCITY_DISSIPATION = parseFloat(cfg.VelocityDiffusion);
         config.PRESSURE = parseFloat(cfg.Pressure);
