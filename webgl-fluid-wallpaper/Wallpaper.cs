@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.Web.WebView2.Core;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -37,6 +39,7 @@ namespace webgl_fluid_wallpaper
         {
             base.OnLoad(e);
 
+
             IntPtr progman = FindWindow("Progman", null);
             IntPtr result = IntPtr.Zero;
 
@@ -68,7 +71,25 @@ namespace webgl_fluid_wallpaper
                 SetParent(this.Handle, specialWindowHandle);
                 SetWindowStyles(this.Handle);
             }
+            _ = RenderWebViewAsync();
             //HideDisplay();
+        }
+
+        protected override async void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+
+            try
+            {
+                Console.WriteLine("Initializing WebView2...");
+                await RenderWebViewAsync();
+                Console.WriteLine("WebView2 initialized successfully!");
+            }
+            catch (System.Runtime.InteropServices.COMException ex)
+            {
+                Console.WriteLine("WebView2 COMException: " + ex.Message);
+                this.BackColor = Color.Blue; // fallback if WebView2 fails
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -159,6 +180,22 @@ namespace webgl_fluid_wallpaper
                 ShowDisplay();
                 isWallpaperVisible = true;
             }
+        }
+
+        public async Task RenderWebViewAsync()
+        {
+            await webView.EnsureCoreWebView2Async(); // null is optional
+
+            string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
+            Console.WriteLine(baseDir); // now this will print
+
+            webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "wallpaper",
+                baseDir,
+                CoreWebView2HostResourceAccessKind.Allow
+            );
+
+            webView.CoreWebView2.Navigate("https://wallpaper/index.html");
         }
     }
 }

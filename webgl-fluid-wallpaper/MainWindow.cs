@@ -29,7 +29,6 @@ namespace webgl_fluid_wallpaper
             InitializeComponent();
             Wallpaper wallpaper = new Wallpaper();
             wallpaper.Show();
-            wallpaper.ShowDisplay();
         }
     }
 }
