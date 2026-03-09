@@ -153,5 +153,175 @@ namespace webgl_fluid_wallpaper
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
         }
+
+        private void trackBar5_Scroll(object sender, EventArgs e)
+        {
+            float value = trackBar5.Value / 100f;
+            label12.Text = value.ToString();
+
+            var message = new
+            {
+                action = "display",
+                layer = "splatRadiusSlider",
+                value = value
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void trackBar6_Scroll(object sender, EventArgs e)
+        {
+            float value = trackBar6.Value / 100f;
+            label14.Text = value.ToString();
+
+            var message = new
+            {
+                action = "display",
+                layer = "bloomIntensitySlider",
+                value = value
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void trackBar7_Scroll(object sender, EventArgs e)
+        {
+            float value = trackBar7.Value / 100f;
+            label16.Text = value.ToString();
+
+            var message = new
+            {
+                action = "display",
+                layer = "bloomThresholdSlider",
+                value = value
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void trackBar8_Scroll(object sender, EventArgs e)
+        {
+            float value = trackBar8.Value / 10f;
+            label18.Text = value.ToString();
+
+            var message = new
+            {
+                action = "display",
+                layer = "sunrayWeightSlider",
+                value = value
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            var message = new
+            {
+                action = "display",
+                layer = "singlecolor",      // matches JS layer
+                value = checkBox1.Checked   // true or false
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            var message = new
+            {
+                action = "display",
+                layer = "multicolor",
+                value = checkBox2.Checked
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            var message = new
+            {
+                action = "display",
+                layer = "shading",
+                value = checkBox3.Checked
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void checkBox4_CheckedChanged(object sender, EventArgs e)
+        {
+            var message = new
+            {
+                action = "display",
+                layer = "bloom",
+                value = checkBox4.Checked
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void checkBox5_CheckedChanged(object sender, EventArgs e)
+        {
+            var message = new
+            {
+                action = "display",
+                layer = "sunrays",
+                value = checkBox5.Checked
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper.UpdateWebView(json);
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.AllowFullOpen = true;
+                colorDialog.AnyColor = true;
+
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    System.Drawing.Color selectedColor = colorDialog.Color;
+                    string hex = $"#{selectedColor.R:X2}{selectedColor.G:X2}{selectedColor.B:X2}";
+
+                    var message = new
+                    {
+                        action = "display",
+                        layer = "bgcolor",
+                        value = hex
+                    };
+
+                    string json = JsonConvert.SerializeObject(message);
+                    wallpaper.UpdateWebView(json);
+                }
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.AllowFullOpen = true;
+                colorDialog.AnyColor = true;
+
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    System.Drawing.Color selectedColor = colorDialog.Color;
+                    string hex = $"#{selectedColor.R:X2}{selectedColor.G:X2}{selectedColor.B:X2}";
+
+                    var message = new
+                    {
+                        action = "display",
+                        layer = "fluidcolor",
+                        value = hex
+                    };
+
+                    string json = JsonConvert.SerializeObject(message);
+                    wallpaper.UpdateWebView(json);
+                }
+            }
+        }
     }
 }
