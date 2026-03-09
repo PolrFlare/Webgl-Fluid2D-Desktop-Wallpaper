@@ -71,6 +71,12 @@
     <Compile Include="Wallpaper.Designer.cs">
       <DependentUpon>Wallpaper.cs</DependentUpon>
     </Compile>
+    <Content Include="Assets\dat.gui.min.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\script.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="MainWindow.aa-DJ.resx">
       <DependentUpon>MainWindow.cs</DependentUpon>
     </EmbeddedResource>
@@ -92,6 +98,9 @@
     <EmbeddedResource Include="Wallpaper.resx">
       <DependentUpon>Wallpaper.cs</DependentUpon>
     </EmbeddedResource>
+    <Content Include="Assets\config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

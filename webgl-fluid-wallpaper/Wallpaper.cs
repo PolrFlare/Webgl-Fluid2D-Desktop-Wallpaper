@@ -21,7 +21,6 @@ namespace webgl_fluid_wallpaper
 
         public Wallpaper()
         {
-            Console.WriteLine("test");
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.None;
             this.ShowInTaskbar = false;
@@ -71,25 +70,7 @@ namespace webgl_fluid_wallpaper
                 SetParent(this.Handle, specialWindowHandle);
                 SetWindowStyles(this.Handle);
             }
-            _ = RenderWebViewAsync();
-            //HideDisplay();
-        }
-
-        protected override async void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-
-            try
-            {
-                Console.WriteLine("Initializing WebView2...");
-                await RenderWebViewAsync();
-                Console.WriteLine("WebView2 initialized successfully!");
-            }
-            catch (System.Runtime.InteropServices.COMException ex)
-            {
-                Console.WriteLine("WebView2 COMException: " + ex.Message);
-                this.BackColor = Color.Blue; // fallback if WebView2 fails
-            }
+            HideDisplay();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -181,18 +162,30 @@ namespace webgl_fluid_wallpaper
                 isWallpaperVisible = true;
             }
         }
-
-        public async Task RenderWebViewAsync()
+        public async void RenderWebViewAsync()
         {
-            await webView.EnsureCoreWebView2Async(); // null is optional
+            webView = new Microsoft.Web.WebView2.WinForms.WebView2
+            {
+                Dock = DockStyle.Fill
+            };
+            this.Controls.Add(webView);
 
-            string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-            Console.WriteLine(baseDir); // now this will print
+            await webView.EnsureCoreWebView2Async();
+
+            webView.CoreWebView2.NavigationCompleted += (sender, args) =>
+            {
+                if (args.IsSuccess)
+                {
+                    ShowDisplay();
+                }
+            };
+
+            string assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
 
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                 "wallpaper",
-                baseDir,
-                CoreWebView2HostResourceAccessKind.Allow
+                assetsPath,
+                Microsoft.Web.WebView2.Core.CoreWebView2HostResourceAccessKind.Allow
             );
 
             webView.CoreWebView2.Navigate("https://wallpaper/index.html");

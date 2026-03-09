@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -18,6 +19,8 @@ namespace webgl_fluid_wallpaper
 
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
+        Wallpaper wallpaper;
+
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
@@ -27,8 +30,21 @@ namespace webgl_fluid_wallpaper
         public MainWindow()
         {
             InitializeComponent();
-            Wallpaper wallpaper = new Wallpaper();
-            wallpaper.Show();
+            Thread t = new Thread(() =>
+            {
+                System.Windows.Forms.Application.EnableVisualStyles();
+                System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
+                wallpaper = new Wallpaper();
+
+                wallpaper.Load += async (s, e) =>
+                {
+                    wallpaper.RenderWebViewAsync();
+                };
+
+                System.Windows.Forms.Application.Run(wallpaper);
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
         }
     }
 }
