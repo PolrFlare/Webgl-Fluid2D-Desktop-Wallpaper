@@ -25,5 +25,10 @@ namespace webgl_fluid_wallpaper
         public float BloomIntensity { get; set; }
         public float SunrayWeight { get; set; }
         public string BackgroundColor { get; set; }
+
+        // app only
+        public bool StartWithWindows { get; set; } = false;
+        public bool PauseWhenFullscreen { get; set; } = false;
+        public bool WallpaperEnabled { get; set; } = true;
     }
 }

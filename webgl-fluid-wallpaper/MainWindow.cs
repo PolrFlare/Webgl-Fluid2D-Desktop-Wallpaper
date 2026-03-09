@@ -20,8 +20,222 @@ namespace webgl_fluid_wallpaper
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetShellWindow();
+
+        [DllImport("user32.dll")]
+        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        const int GWL_STYLE = -16;
+        const int WS_BORDER = 0x00800000;
+        const int WS_CAPTION = 0x00C00000;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
         Wallpaper wallpaper;
         private MouseHook mouseHook;
+        private NotifyIcon trayIcon;
+        private ContextMenuStrip trayMenu;
+        private System.Windows.Forms.Timer focusTimer;
+
+        private bool wallpaperEnabled = true;
+        private bool startWithWindows = false;
+        private bool pauseWhenNotFocused = false;
+        private bool isExiting = false;
+
+        private void InitializeTray()
+        {
+            trayMenu = new ContextMenuStrip();
+
+            var toggleDisplay = new ToolStripMenuItem("Disable Display");
+            var startupItem = new ToolStripMenuItem("Start With Windows");
+            var pauseItem = new ToolStripMenuItem("Pause When In Fullscreen");
+            var exitItem = new ToolStripMenuItem("Exit");
+
+            startupItem.CheckOnClick = true;
+            pauseItem.CheckOnClick = true;
+
+            startupItem.Checked = startWithWindows;
+            pauseItem.Checked = pauseWhenNotFocused;
+            if (!wallpaperEnabled)
+                toggleDisplay.Text = "Enable Display";
+
+            toggleDisplay.Click += (s, e) =>
+            {
+                wallpaperEnabled = !wallpaperEnabled;
+
+                if (wallpaperEnabled)
+                {
+                    toggleDisplay.Text = "Disable Display";
+                    wallpaper.ShowDisplay();
+                }
+                else
+                {
+                    toggleDisplay.Text = "Enable Display";
+                    wallpaper.HideDisplay();
+                }
+                var config = LoadConfig();
+                config.WallpaperEnabled = wallpaperEnabled;
+                SaveConfig(config);
+            };
+
+            startupItem.CheckedChanged += (s, e) =>
+            {
+                startWithWindows = startupItem.Checked;
+                SetStartup(startWithWindows);
+                var config = LoadConfig();
+                config.StartWithWindows = startWithWindows;
+                SaveConfig(config);
+            };
+
+            pauseItem.CheckedChanged += (s, e) =>
+            {
+                pauseWhenNotFocused = pauseItem.Checked;
+                var config = LoadConfig();
+                config.PauseWhenFullscreen = pauseWhenNotFocused;
+                SaveConfig(config);
+            };
+
+            exitItem.Click += (s, e) =>
+            {
+                isExiting = true;
+                trayIcon.Visible = false;
+                mouseHook?.Stop();
+                wallpaper?.close();
+                Application.Exit();
+            };
+
+            trayMenu.Items.Add(toggleDisplay);
+            trayMenu.Items.Add(startupItem);
+            trayMenu.Items.Add(pauseItem);
+            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add(exitItem);
+
+            trayIcon = new NotifyIcon();
+            trayIcon.Text = "WebGL Fluid Wallpaper";
+            trayIcon.Icon = SystemIcons.Application;
+            trayIcon.ContextMenuStrip = trayMenu;
+            trayIcon.Visible = true;
+
+            trayIcon.DoubleClick += (s, e) =>
+            {
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+            };
+        }
+
+        private void StartFocusMonitor()
+        {
+            focusTimer = new System.Windows.Forms.Timer();
+            focusTimer.Interval = 500;
+
+            focusTimer.Tick += (s, e) =>
+            {
+                if (!pauseWhenNotFocused || wallpaper == null)
+                    return;
+
+                IntPtr foreground = GetForegroundWindow();
+                IntPtr desktop = GetShellWindow();
+
+                if (foreground == IntPtr.Zero || foreground == desktop)
+                {
+                    SendFocus("desktop");
+                    mouseHook.SetPaused(false);
+                    return;
+                }
+
+                RECT rect;
+                GetWindowRect(foreground, out rect);
+
+                int width = rect.Right - rect.Left;
+                int height = rect.Bottom - rect.Top;
+
+                Rectangle screen = Screen.FromHandle(foreground).Bounds;
+
+                int style = GetWindowLong(foreground, GWL_STYLE);
+
+                bool borderless = (style & WS_CAPTION) == 0;
+                bool coversScreen =
+                    rect.Left <= screen.Left &&
+                    rect.Top <= screen.Top &&
+                    rect.Right >= screen.Right &&
+                    rect.Bottom >= screen.Bottom;
+
+                bool fullscreen = borderless && coversScreen;
+
+                if (fullscreen)
+                {
+                    SendFocus("window");
+                    mouseHook.SetPaused(true);
+                }
+                else
+                {
+                    SendFocus("desktop");
+                    mouseHook.SetPaused(false);
+                }
+            };
+
+            focusTimer.Start();
+        }
+
+        private void SendFocus(string focus)
+        {
+            var message = new
+            {
+                action = "focuschange",
+                focus = focus
+            };
+
+            string json = JsonConvert.SerializeObject(message);
+
+            if (wallpaper != null)
+                wallpaper.UpdateWebView(json);
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (!isExiting)
+            {
+                e.Cancel = true;
+                this.Hide();
+            }
+        }
+
+        private void SetStartup(bool enable)
+        {
+            string startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            string shortcutPath = System.IO.Path.Combine(startupPath, "WebGLFluidWallpaper.lnk");
+
+            if (enable)
+            {
+                if (!System.IO.File.Exists(shortcutPath))
+                {
+                    var shell = new IWshRuntimeLibrary.WshShell();
+                    var shortcut = (IWshRuntimeLibrary.IWshShortcut)shell.CreateShortcut(shortcutPath);
+                    shortcut.TargetPath = Application.ExecutablePath;
+                    shortcut.Save();
+                }
+            }
+            else
+            {
+                if (System.IO.File.Exists(shortcutPath))
+                    System.IO.File.Delete(shortcutPath);
+            }
+        }
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -29,10 +243,13 @@ namespace webgl_fluid_wallpaper
             int useDark = 1;
             DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useDark, sizeof(int));
         }
+
         public MainWindow()
         {
             InitializeComponent();
             ApplyConfigToGUI();
+            InitializeTray();
+            StartFocusMonitor();
             mouseHook = new MouseHook();
             Thread t = new Thread(() =>
             {
@@ -42,8 +259,14 @@ namespace webgl_fluid_wallpaper
 
                 wallpaper.Load += async (s, e) =>
                 {
-                    wallpaper.RenderWebViewAsync();
+                    wallpaper.RenderWebViewAsync();;
                 };
+                wallpaper.WallpaperReady += () =>
+                {
+                    if (!wallpaperEnabled)
+                        wallpaper.HideDisplay();
+                };
+
                 mouseHookStart();
                 System.Windows.Forms.Application.Run(wallpaper);
             });
@@ -85,6 +308,10 @@ namespace webgl_fluid_wallpaper
         private void ApplyConfigToGUI()
         {
             var config = LoadConfig();
+
+            startWithWindows = config.StartWithWindows;
+            pauseWhenNotFocused = config.PauseWhenFullscreen;
+            wallpaperEnabled = config.WallpaperEnabled;
 
             comboBox1.SelectedItem = config.Quality;
             comboBox2.SelectedItem = config.Resolution;

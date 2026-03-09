@@ -18,6 +18,7 @@ namespace webgl_fluid_wallpaper
         private IntPtr specialWindowHandle = IntPtr.Zero;
         public Microsoft.Web.WebView2.WinForms.WebView2 webView;
         private bool isWallpaperVisible = false;
+        public event Action WallpaperReady;
 
         public Wallpaper()
         {
@@ -177,6 +178,7 @@ namespace webgl_fluid_wallpaper
                 if (args.IsSuccess)
                 {
                     ShowDisplay();
+                    WallpaperReady?.Invoke();
                 }
             };
 
@@ -204,6 +206,18 @@ namespace webgl_fluid_wallpaper
                     //Console.WriteLine(jsObject);
                 }
             }));
+        }
+
+        public void close()
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(close));
+                return;
+            }
+
+            HideDisplay();
+            this.Close();
         }
     }
 }
