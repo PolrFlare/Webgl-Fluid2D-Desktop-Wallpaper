@@ -190,5 +190,20 @@ namespace webgl_fluid_wallpaper
 
             webView.CoreWebView2.Navigate("https://wallpaper/index.html");
         }
+
+        public void UpdateWebView(string jsObject)
+        {
+            this.Invoke(new Action(() =>
+            {
+                if (webView?.CoreWebView2 != null)
+                    webView.CoreWebView2.PostWebMessageAsJson(jsObject);
+
+                if (jsObject.Contains("\"action\":\"display\""))
+                {
+                    //ShowDisplay();
+                    //Console.WriteLine(jsObject);
+                }
+            }));
+        }
     }
 }
