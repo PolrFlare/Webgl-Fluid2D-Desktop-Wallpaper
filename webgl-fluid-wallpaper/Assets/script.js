@@ -86,6 +86,37 @@ let config = {
     SUNRAYS_WEIGHT: 1.0,
 }
 
+fetch("https://wallpaper/config.json")
+    .then(res => res.json())
+    .then(cfg => {
+        console.log("Loaded config.json:", cfg);
+
+        config.SIM_RESOLUTION = cfg.Resolution || 256;
+        config.DYE_RESOLUTION = cfg.Quality === "high" ? 1024 : 512;
+        config.DENSITY_DISSIPATION = parseFloat(cfg.DensityDiffusion);
+        config.VELOCITY_DISSIPATION = parseFloat(cfg.VelocityDiffusion);
+        config.PRESSURE = parseFloat(cfg.Pressure);
+        config.CURL = parseFloat(cfg.Vorticity);
+        config.SPLAT_RADIUS = parseFloat(cfg.SplatRadius);
+        config.SHADING = cfg.ShadingEnabled;
+        config.COLORFUL = cfg.MultiColor;
+        config.SINGLE_COLOR = cfg.SingleColor;
+        config.BLOOM = cfg.BloomEnabled;
+        config.BLOOM_THRESHOLD = parseFloat(cfg.BloomThreshold);
+        config.BLOOM_INTENSITY = parseFloat(cfg.BloomIntensity);
+        config.SUNRAYS = cfg.SunrayEnabled;
+        config.SUNRAYS_WEIGHT = parseFloat(cfg.SunrayWeight);
+
+        // Colors
+        config.BACK_COLOR = hexToRGB(cfg.BackgroundColor);
+        config.FLUID_COLOR = hexToRGB(cfg.FluidColor);
+
+        console.log("Config applied:", config);
+
+        // Now initialize simulation here or call init function
+        initSimulation();
+    });
+
 function changeSimResolution(resolution) {
     config.SIM_RESOLUTION = resolution;
 }

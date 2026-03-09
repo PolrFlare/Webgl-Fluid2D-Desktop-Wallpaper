@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -64,6 +65,22 @@ namespace webgl_fluid_wallpaper
             });
         }
 
+        private string configPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets/config.json");
+        private FluidConfig LoadConfig()
+        {
+            if (!System.IO.File.Exists(configPath))
+                return new FluidConfig(); // fallback
+
+            string json = System.IO.File.ReadAllText(configPath);
+            return JsonConvert.DeserializeObject<FluidConfig>(json);
+        }
+
+        private void SaveConfig(FluidConfig config)
+        {
+            string json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            System.IO.File.WriteAllText(configPath, json);
+        }
+
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             string value = comboBox1.SelectedItem.ToString();
@@ -92,6 +109,9 @@ namespace webgl_fluid_wallpaper
 
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.Resolution = value;
+            SaveConfig(config);
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
@@ -107,6 +127,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.DensityDiffusion = value;
+            SaveConfig(config);
         }
 
         private void trackBar2_Scroll(object sender, EventArgs e)
@@ -122,6 +145,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.VelocityDiffusion = value;
+            SaveConfig(config);
         }
 
         private void trackBar3_Scroll(object sender, EventArgs e)
@@ -137,6 +163,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.Pressure = value;
+            SaveConfig(config);
         }
 
         private void trackBar4_Scroll(object sender, EventArgs e)
@@ -152,6 +181,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.Vorticity = value;
+            SaveConfig(config);
         }
 
         private void trackBar5_Scroll(object sender, EventArgs e)
@@ -167,6 +199,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.SplatRadius = value;
+            SaveConfig(config);
         }
 
         private void trackBar6_Scroll(object sender, EventArgs e)
@@ -182,6 +217,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.BloomIntensity = value;
+            SaveConfig(config);
         }
 
         private void trackBar7_Scroll(object sender, EventArgs e)
@@ -197,6 +235,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.BloomThreshold = value;
+            SaveConfig(config);
         }
 
         private void trackBar8_Scroll(object sender, EventArgs e)
@@ -212,6 +253,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.SunrayWeight = value;
+            SaveConfig(config);
         }
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -219,11 +263,14 @@ namespace webgl_fluid_wallpaper
             var message = new
             {
                 action = "display",
-                layer = "singlecolor",      // matches JS layer
-                value = checkBox1.Checked   // true or false
+                layer = "singlecolor",
+                value = checkBox1.Checked
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.SingleColor = checkBox1.Checked;
+            SaveConfig(config);
         }
 
         private void checkBox2_CheckedChanged(object sender, EventArgs e)
@@ -236,6 +283,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.MultiColor = checkBox2.Checked;
+            SaveConfig(config);
         }
 
         private void checkBox3_CheckedChanged(object sender, EventArgs e)
@@ -248,6 +298,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.ShadingEnabled = checkBox3.Checked;
+            SaveConfig(config);
         }
 
         private void checkBox4_CheckedChanged(object sender, EventArgs e)
@@ -260,6 +313,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.BloomEnabled = checkBox4.Checked;
+            SaveConfig(config);
         }
 
         private void checkBox5_CheckedChanged(object sender, EventArgs e)
@@ -272,6 +328,9 @@ namespace webgl_fluid_wallpaper
             };
             string json = JsonConvert.SerializeObject(message);
             wallpaper.UpdateWebView(json);
+            var config = LoadConfig();
+            config.SunrayEnabled = checkBox5.Checked;
+            SaveConfig(config);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -295,6 +354,9 @@ namespace webgl_fluid_wallpaper
 
                     string json = JsonConvert.SerializeObject(message);
                     wallpaper.UpdateWebView(json);
+                    var config = LoadConfig();
+                    config.BackgroundColor = hex;
+                    SaveConfig(config);
                 }
             }
         }
@@ -320,6 +382,9 @@ namespace webgl_fluid_wallpaper
 
                     string json = JsonConvert.SerializeObject(message);
                     wallpaper.UpdateWebView(json);
+                    var config = LoadConfig();
+                    config.FluidColor = hex;
+                    SaveConfig(config);
                 }
             }
         }

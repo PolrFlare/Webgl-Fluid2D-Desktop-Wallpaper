@@ -990,9 +990,6 @@
   <data name="button2.TabIndex" type="System.Int32, mscorlib">
     <value>41</value>
   </data>
-  <data name="button2.Text" xml:space="preserve">
-    <value>button2</value>
-  </data>
   <data name="&gt;&gt;button2.Name" xml:space="preserve">
     <value>button2</value>
   </data>
@@ -1019,9 +1016,6 @@
   </data>
   <data name="button1.TabIndex" type="System.Int32, mscorlib">
     <value>40</value>
-  </data>
-  <data name="button1.Text" xml:space="preserve">
-    <value>button1</value>
   </data>
   <data name="&gt;&gt;button1.Name" xml:space="preserve">
     <value>button1</value>
