@@ -16,7 +16,7 @@ The wallpaper renders the original WebGL simulation behind the desktop icons, al
 
 ### Demo Video
 
-![Demo Video](docs/demo-placeholder.gif)
+![Demo Video](https://github.com/PolrFlare/Webgl-Fluid2D-Desktop-Wallpaper/blob/main/demo/demo.mp4)
 
 ---
 
