@@ -27,8 +27,10 @@ namespace webgl_fluid_wallpaper
             this.ShowInTaskbar = false;
             this.ShowIcon = false;
             this.TopMost = true;
-            this.Bounds = Screen.PrimaryScreen.Bounds;
-            this.BackColor = System.Drawing.Color.White;
+            // dual monitor support (were going to use the "span" method for now)
+            Rectangle virtualScreen = SystemInformation.VirtualScreen;
+            this.Bounds = virtualScreen;
+            this.BackColor = System.Drawing.Color.Black;
 
             webView = new Microsoft.Web.WebView2.WinForms.WebView2();
             webView.Dock = DockStyle.Fill;
@@ -38,7 +40,6 @@ namespace webgl_fluid_wallpaper
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-
 
             IntPtr progman = FindWindow("Progman", null);
             IntPtr result = IntPtr.Zero;
@@ -69,6 +70,12 @@ namespace webgl_fluid_wallpaper
             if (specialWindowHandle != IntPtr.Zero)
             {
                 SetParent(this.Handle, specialWindowHandle);
+                Rectangle virtualScreen = SystemInformation.VirtualScreen;
+
+                this.Left = virtualScreen.Left;
+                this.Top = virtualScreen.Top;
+                this.Width = virtualScreen.Width;
+                this.Height = virtualScreen.Height;
                 SetWindowStyles(this.Handle);
             }
             HideDisplay();
@@ -218,6 +225,20 @@ namespace webgl_fluid_wallpaper
 
             HideDisplay();
             this.Close();
+        }
+
+        public void ResizeWallpaper(Rectangle virtualScreen)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action(() => ResizeWallpaper(virtualScreen)));
+                return;
+            }
+
+            this.Left = virtualScreen.Left;
+            this.Top = virtualScreen.Top;
+            this.Width = virtualScreen.Width;
+            this.Height = virtualScreen.Height;
         }
     }
 }

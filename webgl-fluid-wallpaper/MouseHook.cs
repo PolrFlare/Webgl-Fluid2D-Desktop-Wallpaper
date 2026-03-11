@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Forms;
+using System.Drawing;
 
 namespace webgl_fluid_wallpaper
 {
@@ -63,8 +65,9 @@ namespace webgl_fluid_wallpaper
             {
                 MSLLHOOKSTRUCT hookStruct = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
 
-                double normalizedX = (double)hookStruct.pt.x / SystemParameters.PrimaryScreenWidth;
-                double normalizedY = 1.0 - ((double)hookStruct.pt.y / SystemParameters.PrimaryScreenHeight);
+                Rectangle virtualScreen = SystemInformation.VirtualScreen;
+                double normalizedX = (hookStruct.pt.x - virtualScreen.Left) / (double)virtualScreen.Width;
+                double normalizedY = 1.0 - ((hookStruct.pt.y - virtualScreen.Top) / (double)virtualScreen.Height);
 
                 try
                 {

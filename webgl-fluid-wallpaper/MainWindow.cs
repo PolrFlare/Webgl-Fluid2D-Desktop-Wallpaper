@@ -54,10 +54,11 @@ namespace webgl_fluid_wallpaper
         private NotifyIcon trayIcon;
         private ContextMenuStrip trayMenu;
         private System.Windows.Forms.Timer focusTimer;
+        private Rectangle lastVirtualScreen;
 
         private bool wallpaperEnabled = true;
         private bool startWithWindows = false;
-        private bool pauseWhenFullscreen= false;
+        private bool pauseWhenFullscreen = false;
         private bool pauseWhenMaximized = false;
         private bool isExiting = false;
 
@@ -112,7 +113,7 @@ namespace webgl_fluid_wallpaper
 
             pauseItem.CheckedChanged += (s, e) =>
             {
-                pauseWhenFullscreen= pauseItem.Checked;
+                pauseWhenFullscreen = pauseItem.Checked;
                 var config = LoadConfig();
                 config.PauseWhenFullscreen = pauseWhenFullscreen;
                 SaveConfig(config);
@@ -163,7 +164,17 @@ namespace webgl_fluid_wallpaper
 
             focusTimer.Tick += (s, e) =>
             {
-                if ((!pauseWhenFullscreen&& !pauseWhenMaximized) || wallpaper == null)
+                // check for any monitor res resizes
+                Rectangle currentVirtual = SystemInformation.VirtualScreen;
+                if (currentVirtual != lastVirtualScreen)
+                {
+                    lastVirtualScreen = currentVirtual;
+
+                    if (wallpaper != null)
+                        wallpaper.ResizeWallpaper(currentVirtual);
+                }
+
+                if ((!pauseWhenFullscreen && !pauseWhenMaximized) || wallpaper == null)
                     return;
 
                 IntPtr foreground = GetForegroundWindow();
@@ -199,7 +210,7 @@ namespace webgl_fluid_wallpaper
 
                 bool pause = false;
 
-                if (pauseWhenFullscreen&& fullscreen)
+                if (pauseWhenFullscreen && fullscreen)
                     pause = true;
 
                 if (pauseWhenMaximized && maximized)
@@ -275,6 +286,7 @@ namespace webgl_fluid_wallpaper
         public MainWindow()
         {
             InitializeComponent();
+            lastVirtualScreen = SystemInformation.VirtualScreen;
             ApplyConfigToGUI();
             InitializeTray();
             StartFocusMonitor();
@@ -287,7 +299,7 @@ namespace webgl_fluid_wallpaper
 
                 wallpaper.Load += async (s, e) =>
                 {
-                    wallpaper.RenderWebViewAsync();;
+                    wallpaper.RenderWebViewAsync(); ;
                 };
                 wallpaper.WallpaperReady += () =>
                 {
@@ -338,7 +350,7 @@ namespace webgl_fluid_wallpaper
             var config = LoadConfig();
 
             startWithWindows = config.StartWithWindows;
-            pauseWhenFullscreen= config.PauseWhenFullscreen;
+            pauseWhenFullscreen = config.PauseWhenFullscreen;
             wallpaperEnabled = config.WallpaperEnabled;
             pauseWhenMaximized = config.PauseWhenMaximized;
 
