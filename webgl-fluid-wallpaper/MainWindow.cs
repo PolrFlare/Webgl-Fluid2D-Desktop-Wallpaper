@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.IO;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace webgl_fluid_wallpaper
@@ -55,6 +56,9 @@ namespace webgl_fluid_wallpaper
         private ContextMenuStrip trayMenu;
         private System.Windows.Forms.Timer focusTimer;
         private Rectangle lastVirtualScreen;
+        private AudioMonitor audioMonitor;
+
+        private bool audioMonitorEnabled = false;
 
         private bool wallpaperEnabled = true;
         private bool startWithWindows = false;
@@ -133,6 +137,7 @@ namespace webgl_fluid_wallpaper
                 isExiting = true;
                 trayIcon.Visible = false;
                 mouseHook?.Stop();
+                audioMonitor?.Stop();
                 wallpaper?.close();
                 Application.Exit();
             };
@@ -146,7 +151,7 @@ namespace webgl_fluid_wallpaper
 
             trayIcon = new NotifyIcon();
             trayIcon.Text = "WebGL Fluid Wallpaper";
-            trayIcon.Icon = SystemIcons.Application;
+            trayIcon.Icon = new Icon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "icon.ico"));
             trayIcon.ContextMenuStrip = trayMenu;
             trayIcon.Visible = true;
 
@@ -329,6 +334,32 @@ namespace webgl_fluid_wallpaper
             });
         }
 
+        private void StartAudioMonitor()
+        {
+            if (audioMonitor != null) return;
+            audioMonitor = new AudioMonitor();
+            audioMonitor.OnAudioLevel += HandleAudioLevel;
+            audioMonitor.Start();
+        }
+
+        private void HandleAudioLevel(int level)
+        {
+            var message = new
+            {
+                action = "audio",
+                value = level
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper?.UpdateWebView(json);
+        }
+
+        private void StopAudioMonitor()
+        {
+            if (audioMonitor == null) return;
+            audioMonitor.Stop();
+            audioMonitor = null;
+        }
+
         private string configPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets/config.json");
         private FluidConfig LoadConfig()
         {
@@ -386,6 +417,18 @@ namespace webgl_fluid_wallpaper
             checkBox3.Checked = config.ShadingEnabled;
             checkBox4.Checked = config.BloomEnabled;
             checkBox5.Checked = config.SunrayEnabled;
+            checkBox6.Checked = config.audioVisualizerEnabled;
+
+            audioMonitorEnabled = config.audioVisualizerEnabled;
+
+            if (audioMonitorEnabled)
+            {
+                StartAudioMonitor();
+            }
+            else
+            {
+                StopAudioMonitor();
+            }
 
             button1.Text = config.BackgroundColor;
             button2.Text = config.FluidColor;
@@ -718,5 +761,20 @@ namespace webgl_fluid_wallpaper
                 }
             }
         }
+
+        private void checkBox6_CheckedChanged(object sender, EventArgs e)
+        {
+            var config = LoadConfig();
+            config.audioVisualizerEnabled = checkBox6.Checked;
+            SaveConfig(config);
+
+            audioMonitorEnabled = checkBox6.Checked;
+
+            if (audioMonitorEnabled)
+                StartAudioMonitor();
+            else
+                StopAudioMonitor();
+        }
     }
+
 }

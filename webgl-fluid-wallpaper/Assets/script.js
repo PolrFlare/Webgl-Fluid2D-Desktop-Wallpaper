@@ -1470,10 +1470,10 @@ function blur (target, temp, iterations) {
 function splatPointer (pointer) {
     let dx = pointer.deltaX * config.SPLAT_FORCE;
     let dy = pointer.deltaY * config.SPLAT_FORCE;
-    splat(pointer.texcoordX, pointer.texcoordY, dx, dy, pointer.color);
+    splat(pointer.texcoordX, pointer.texcoordY, dx, dy, pointer.color, null);
 }
 
-function multipleSplats (amount) {
+function multipleSplats (amount, intensity = 1) {
     for (let i = 0; i < amount; i++) {
         const color = generateColor();
         color.r *= 10.0;
@@ -1481,19 +1481,26 @@ function multipleSplats (amount) {
         color.b *= 10.0;
         const x = Math.random();
         const y = Math.random();
-        const dx = 1000 * (Math.random() - 0.5);
-        const dy = 1000 * (Math.random() - 0.5);
-        splat(x, y, dx, dy, color);
+
+        // force manipulation
+        const force = 1000 * intensity;
+        const dx = force * (Math.random() - 0.5);
+        const dy = force * (Math.random() - 0.5);
+        const radius = correctRadius((config.SPLAT_RADIUS / 100.0) * intensity);
+        splat(x, y, dx, dy, color, radius);
     }
 }
 
-function splat (x, y, dx, dy, color) {
+function splat (x, y, dx, dy, color, radius = null) {
+    if (radius == null) {
+        radius = correctRadius(config.SPLAT_RADIUS / 100.0);
+    }
     splatProgram.bind();
     gl.uniform1i(splatProgram.uniforms.uTarget, velocity.read.attach(0));
     gl.uniform1f(splatProgram.uniforms.aspectRatio, canvas.width / canvas.height);
     gl.uniform2f(splatProgram.uniforms.point, x, y);
     gl.uniform3f(splatProgram.uniforms.color, dx, dy, 0.0);
-    gl.uniform1f(splatProgram.uniforms.radius, correctRadius(config.SPLAT_RADIUS / 100.0));
+    gl.uniform1f(splatProgram.uniforms.radius, radius);
     blit(velocity.write);
     velocity.swap();
 
@@ -1843,6 +1850,7 @@ window.chrome.webview.addEventListener("message", event => {
             config.PAUSED = false;
         }
     }
+
     if (data.action === "mousemove") {
         const now = performance.now();
         if (now - lastMovementTime < 1000 / 120) return; // ~30fps
@@ -1868,5 +1876,13 @@ window.chrome.webview.addEventListener("message", event => {
         movementTimeout = setTimeout(() => {
             updatePointerUpData(pointer);
         }, 100);
+    }
+
+    // soon well make the splats bigger depending on intensity...
+    if (data.action === "audio") {
+        if (data.value === 1) multipleSplats(1, 0.6);
+        if (data.value === 2) multipleSplats(1, 1.0);
+        if (data.value === 3) multipleSplats(1, 1.8);
+        if (data.value === 4) multipleSplats(1, 3.0);
     }
 });
