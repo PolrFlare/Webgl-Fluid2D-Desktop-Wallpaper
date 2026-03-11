@@ -30,5 +30,6 @@ namespace webgl_fluid_wallpaper
         public bool StartWithWindows { get; set; } = false;
         public bool PauseWhenFullscreen { get; set; } = false;
         public bool WallpaperEnabled { get; set; } = true;
+        public bool PauseWhenMaximized { get; set; } = false;
     }
 }

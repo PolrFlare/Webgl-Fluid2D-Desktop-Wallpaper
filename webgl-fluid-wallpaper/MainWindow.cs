@@ -33,6 +33,9 @@ namespace webgl_fluid_wallpaper
         [DllImport("user32.dll")]
         static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
+        [DllImport("user32.dll")]
+        static extern bool IsZoomed(IntPtr hWnd);
+
         const int GWL_STYLE = -16;
         const int WS_BORDER = 0x00800000;
         const int WS_CAPTION = 0x00C00000;
@@ -54,7 +57,8 @@ namespace webgl_fluid_wallpaper
 
         private bool wallpaperEnabled = true;
         private bool startWithWindows = false;
-        private bool pauseWhenNotFocused = false;
+        private bool pauseWhenFullscreen= false;
+        private bool pauseWhenMaximized = false;
         private bool isExiting = false;
 
         private void InitializeTray()
@@ -64,13 +68,17 @@ namespace webgl_fluid_wallpaper
             var toggleDisplay = new ToolStripMenuItem("Disable Display");
             var startupItem = new ToolStripMenuItem("Start With Windows");
             var pauseItem = new ToolStripMenuItem("Pause When In Fullscreen");
+            var pauseMaxItem = new ToolStripMenuItem("Pause When Window Maximized");
             var exitItem = new ToolStripMenuItem("Exit");
 
             startupItem.CheckOnClick = true;
             pauseItem.CheckOnClick = true;
+            pauseMaxItem.CheckOnClick = true;
+
 
             startupItem.Checked = startWithWindows;
-            pauseItem.Checked = pauseWhenNotFocused;
+            pauseItem.Checked = pauseWhenFullscreen;
+            pauseMaxItem.Checked = pauseWhenMaximized;
             if (!wallpaperEnabled)
                 toggleDisplay.Text = "Enable Display";
 
@@ -104,9 +112,18 @@ namespace webgl_fluid_wallpaper
 
             pauseItem.CheckedChanged += (s, e) =>
             {
-                pauseWhenNotFocused = pauseItem.Checked;
+                pauseWhenFullscreen= pauseItem.Checked;
                 var config = LoadConfig();
-                config.PauseWhenFullscreen = pauseWhenNotFocused;
+                config.PauseWhenFullscreen = pauseWhenFullscreen;
+                SaveConfig(config);
+            };
+
+            pauseMaxItem.CheckedChanged += (s, e) =>
+            {
+                pauseWhenMaximized = pauseMaxItem.Checked;
+
+                var config = LoadConfig();
+                config.PauseWhenMaximized = pauseWhenMaximized;
                 SaveConfig(config);
             };
 
@@ -122,6 +139,7 @@ namespace webgl_fluid_wallpaper
             trayMenu.Items.Add(toggleDisplay);
             trayMenu.Items.Add(startupItem);
             trayMenu.Items.Add(pauseItem);
+            trayMenu.Items.Add(pauseMaxItem);
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(exitItem);
 
@@ -145,11 +163,13 @@ namespace webgl_fluid_wallpaper
 
             focusTimer.Tick += (s, e) =>
             {
-                if (!pauseWhenNotFocused || wallpaper == null)
+                if ((!pauseWhenFullscreen&& !pauseWhenMaximized) || wallpaper == null)
                     return;
 
                 IntPtr foreground = GetForegroundWindow();
                 IntPtr desktop = GetShellWindow();
+
+                bool maximized = IsZoomed(foreground);
 
                 if (foreground == IntPtr.Zero || foreground == desktop)
                 {
@@ -177,7 +197,15 @@ namespace webgl_fluid_wallpaper
 
                 bool fullscreen = borderless && coversScreen;
 
-                if (fullscreen)
+                bool pause = false;
+
+                if (pauseWhenFullscreen&& fullscreen)
+                    pause = true;
+
+                if (pauseWhenMaximized && maximized)
+                    pause = true;
+
+                if (pause)
                 {
                     SendFocus("window");
                     mouseHook.SetPaused(true);
@@ -310,8 +338,9 @@ namespace webgl_fluid_wallpaper
             var config = LoadConfig();
 
             startWithWindows = config.StartWithWindows;
-            pauseWhenNotFocused = config.PauseWhenFullscreen;
+            pauseWhenFullscreen= config.PauseWhenFullscreen;
             wallpaperEnabled = config.WallpaperEnabled;
+            pauseWhenMaximized = config.PauseWhenMaximized;
 
             comboBox1.SelectedItem = config.Quality;
             comboBox2.SelectedItem = config.Resolution;
