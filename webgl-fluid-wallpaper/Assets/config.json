@@ -2,12 +2,12 @@
   "Quality": "high",
   "Resolution": "256",
   "DensityDiffusion": 1.0,
-  "VelocityDiffusion": 1.0,
-  "Pressure": 0.1,
-  "Vorticity": 20.0,
+  "VelocityDiffusion": 0.2,
+  "Pressure": 0.8,
+  "Vorticity": 30.0,
   "SplatRadius": 0.2,
-  "SingleColor": true,
-  "MultiColor": false,
+  "SingleColor": false,
+  "MultiColor": true,
   "FluidColor": "#ff0000",
   "SunrayEnabled": true,
   "ShadingEnabled": true,
@@ -15,5 +15,5 @@
   "BloomThreshold": 0.6,
   "BloomIntensity": 0.8,
   "SunrayWeight": 1.0,
-  "BackgroundColor": "#ffffff"
+  "BackgroundColor": "#000000"
 }

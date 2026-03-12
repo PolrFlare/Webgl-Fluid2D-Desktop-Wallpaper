@@ -1,4 +1,5 @@
 ﻿using Microsoft.Web.WebView2.Core;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,15 +19,16 @@ namespace webgl_fluid_wallpaper
         private IntPtr specialWindowHandle = IntPtr.Zero;
         public Microsoft.Web.WebView2.WinForms.WebView2 webView;
         private bool isWallpaperVisible = false;
-        public event Action WallpaperReady;
-
-        public Wallpaper()
+        public event Action WallpaperReady; public Wallpaper()
         {
             InitializeComponent();
+            var stdOut = Console.OpenStandardOutput();
+            var writer = new StreamWriter(stdOut) { AutoFlush = true };
+            Console.SetOut(writer);
             this.FormBorderStyle = FormBorderStyle.None;
             this.ShowInTaskbar = false;
             this.ShowIcon = false;
-            this.TopMost = true;
+            this.TopMost = false;
             // dual monitor support (were going to use the "span" method for now)
             Rectangle virtualScreen = SystemInformation.VirtualScreen;
             this.Bounds = virtualScreen;
@@ -40,45 +42,120 @@ namespace webgl_fluid_wallpaper
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-
             IntPtr progman = FindWindow("Progman", null);
-            IntPtr result = IntPtr.Zero;
+            SendMessageTimeout(progman, 0x052C, IntPtr.Zero, IntPtr.Zero,
+                               SendMessageTimeoutFlags.SMTO_NORMAL, 1000, out _);
 
-            SendMessageTimeout(progman, WM_SPAWN_WORKERW, IntPtr.Zero, IntPtr.Zero,
-                SendMessageTimeoutFlags.SMTO_NORMAL, 1000, out result);
-
-            IntPtr workerw = IntPtr.Zero;
-            IntPtr desktopHandle = IntPtr.Zero;
-            IntPtr shellViewWin = IntPtr.Zero;
-
-            IntPtr temp = IntPtr.Zero;
-            do
+            string windowsInfo = GetWindowsEdition();
+            IntPtr workerw;
+            if (windowsInfo.Contains("11"))
             {
-                temp = FindWindowEx(IntPtr.Zero, temp, "WorkerW", null);
-                if (temp != IntPtr.Zero)
-                {
-                    IntPtr child = FindWindowEx(temp, IntPtr.Zero, "SHELLDLL_DefView", null);
-                    if (child != IntPtr.Zero)
-                    {
-                        shellViewWin = child;
-                        break;
-                    }
-                }
-            } while (temp != IntPtr.Zero);
-
-            specialWindowHandle = FindWindowEx(IntPtr.Zero, temp, "WorkerW", null);
-            if (specialWindowHandle != IntPtr.Zero)
+                workerw = GetDesktopWorkerW_Win11();
+            }
+            else
             {
-                SetParent(this.Handle, specialWindowHandle);
-                Rectangle virtualScreen = SystemInformation.VirtualScreen;
+                workerw = GetDesktopWorkerW_Win10();
+            }
 
-                this.Left = virtualScreen.Left;
-                this.Top = virtualScreen.Top;
-                this.Width = virtualScreen.Width;
-                this.Height = virtualScreen.Height;
+            if (workerw != IntPtr.Zero)
+            {
+                SetParent(this.Handle, workerw);
+                this.Bounds = SystemInformation.VirtualScreen;
                 SetWindowStyles(this.Handle);
             }
             HideDisplay();
+        }
+
+        /// <summary>
+        /// Windows 10 WorkerW logic: find WorkerW that comes after the one containing SHELLDLL_DefView
+        /// </summary>
+        private IntPtr GetDesktopWorkerW_Win10()
+        {
+            IntPtr progman = FindWindow("Progman", null);
+            IntPtr shellView = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
+            IntPtr workerW = IntPtr.Zero;
+            if (shellView == IntPtr.Zero)
+            {
+                do
+                {
+                    workerW = FindWindowEx(IntPtr.Zero, workerW, "WorkerW", null);
+                    if (workerW != IntPtr.Zero)
+                    {
+                        IntPtr childShell = FindWindowEx(workerW, IntPtr.Zero, "SHELLDLL_DefView", null);
+                        shellView = childShell;
+                    }
+                } while (shellView == IntPtr.Zero && workerW != IntPtr.Zero);
+            }
+            IntPtr wallpaperWorkerW = IntPtr.Zero;
+            EnumWindows((tophandle, topparamhandle) =>
+            {
+                IntPtr shell = FindWindowEx(tophandle, IntPtr.Zero, "SHELLDLL_DefView", null);
+                if (shell != IntPtr.Zero)
+                {
+                    IntPtr listView = FindWindowEx(shell, IntPtr.Zero, "SysListView32", null);
+                    wallpaperWorkerW = FindWindowEx(IntPtr.Zero, tophandle, "WorkerW", null);
+                }
+                return true;
+            }, IntPtr.Zero);
+            return wallpaperWorkerW != IntPtr.Zero ? wallpaperWorkerW : progman;
+        }
+
+        /// <summary>
+        /// Windows 11 WorkerW logic: there is usually a single WorkerW directly under Progman
+        /// </summary>
+        private IntPtr GetDesktopWorkerW_Win11()
+        {
+            IntPtr progman = FindWindow("Progman", null);
+            IntPtr shellView = FindWindowEx(progman, IntPtr.Zero, "SHELLDLL_DefView", null);
+            IntPtr workerW = FindWindowEx(progman, IntPtr.Zero, "WorkerW", null);
+            if (workerW != IntPtr.Zero)
+            {
+                return workerW;
+            }
+            workerW = IntPtr.Zero;
+            do
+            {
+                workerW = FindWindowEx(IntPtr.Zero, workerW, "WorkerW", null);
+                if (workerW != IntPtr.Zero)
+                {
+                    IntPtr childShell = FindWindowEx(workerW, IntPtr.Zero, "SHELLDLL_DefView", null);
+                    if (childShell != IntPtr.Zero)
+                    {
+                        IntPtr next = IntPtr.Zero;
+                        do
+                        {
+                            next = FindWindowEx(IntPtr.Zero, next, "WorkerW", null);
+                        } while (next != IntPtr.Zero && FindWindowEx(next, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero);
+                        return next != IntPtr.Zero ? next : workerW;
+                    }
+                }
+            } while (workerW != IntPtr.Zero);
+            return progman;
+        }
+
+        private string GetWindowsEdition()
+        {
+            try
+            {
+                var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+                );
+                if (key != null)
+                {
+                    string buildStr = key.GetValue("CurrentBuildNumber") as string ?? "0";
+                    int build;
+                    if (int.TryParse(buildStr, out build))
+                    {
+                        key.Close();
+                        return build >= 22000 ? "11" : "10";
+                    }
+                    key.Close();
+                }
+            }
+            catch
+            {
+            }
+            return "10";
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -99,7 +176,19 @@ namespace webgl_fluid_wallpaper
         public const int WS_EX_TOOLWINDOW = 0x00000080;
         public const int WS_EX_NOACTIVATE = 0x08000000;
 
+
         // p/invoke declarations
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetDesktopWindow();
+
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr GetWindowLong(IntPtr hWnd, int nIndex);
 
@@ -210,7 +299,6 @@ namespace webgl_fluid_wallpaper
                 if (jsObject.Contains("\"action\":\"display\""))
                 {
                     //ShowDisplay();
-                    //Console.WriteLine(jsObject);
                 }
             }));
         }
