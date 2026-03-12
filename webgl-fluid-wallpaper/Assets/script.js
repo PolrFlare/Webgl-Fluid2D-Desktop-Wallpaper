@@ -84,6 +84,34 @@ let config = {
     SUNRAYS: true,
     SUNRAYS_RESOLUTION: 196,
     SUNRAYS_WEIGHT: 1.0,
+    BACK_IMAGE: false,
+}
+
+const backImage = new Image();
+backImage.src = 'wallpaper.png';
+let backgroundTexture = null;
+let backgroundLoaded = false;
+
+backImage.onload = () => {
+    backgroundTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, backImage);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    backgroundLoaded = true;
+};
+
+function drawBackground(target) {
+    if (!backgroundLoaded || !backgroundTexture) return;
+    copyProgram.bind();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+    gl.uniform1i(copyProgram.uniforms.uTexture, 0);
+    blit(target);
 }
 
 const qualityMap = {
@@ -114,18 +142,15 @@ fetch("https://wallpaper/config.json")
         config.COLORFUL = cfg.MultiColor;
         config.SINGLE_COLOR = cfg.SingleColor;
         config.BLOOM = cfg.BloomEnabled;
+        config.BACK_IMAGE = cfg.BackgroundImageEnabled;
         config.BLOOM_THRESHOLD = parseFloat(cfg.BloomThreshold);
         config.BLOOM_INTENSITY = parseFloat(cfg.BloomIntensity);
         config.SUNRAYS = cfg.SunrayEnabled;
         config.SUNRAYS_WEIGHT = parseFloat(cfg.SunrayWeight);
 
-        // Colors
         config.BACK_COLOR = hexToRGB(cfg.BackgroundColor);
         config.FLUID_COLOR = hexToRGB(cfg.FluidColor);
 
-        console.log("Config applied:", config);
-
-        // Now initialize simulation here or call init function
         initSimulation();
     });
 
@@ -1358,8 +1383,12 @@ function render (target) {
         gl.disable(gl.BLEND);
     }
 
-    if (!config.TRANSPARENT)
-        drawColor(target, normalizeColor(config.BACK_COLOR));
+    if (!config.TRANSPARENT) {
+        if (config.BACK_IMAGE)
+            drawBackground(target);
+        else
+            drawColor(target, normalizeColor(config.BACK_COLOR));
+    }
     if (target == null && config.TRANSPARENT)
         drawCheckerboard(target);
     drawDisplay(target);
@@ -1878,11 +1907,42 @@ window.chrome.webview.addEventListener("message", event => {
         }, 100);
     }
 
-    // soon well make the splats bigger depending on intensity...
     if (data.action === "audio") {
         if (data.value === 1) multipleSplats(1, 0.6);
         if (data.value === 2) multipleSplats(1, 1.0);
         if (data.value === 3) multipleSplats(1, 1.8);
         if (data.value === 4) multipleSplats(1, 3.0);
+    }
+
+    if (data.action === "bgimage") {
+        config.BACK_IMAGE = data.value;
+    }
+
+    if (data.action === "reloadimage") {
+        const newImage = new Image();
+        // prevent caching
+        newImage.src = 'wallpaper.png?' + Date.now();
+        newImage.onload = () => {
+            if (backgroundTexture)
+                gl.deleteTexture(backgroundTexture);
+
+            backgroundTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, backgroundTexture);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(
+                gl.TEXTURE_2D,
+                0,
+                gl.RGBA,
+                gl.RGBA,
+                gl.UNSIGNED_BYTE,
+                newImage
+            );
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            backgroundLoaded = true;
+        };
     }
 });

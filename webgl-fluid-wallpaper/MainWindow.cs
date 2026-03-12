@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using NAudio.Utils;
 
 namespace webgl_fluid_wallpaper
 {
@@ -304,7 +305,7 @@ namespace webgl_fluid_wallpaper
 
                 wallpaper.Load += async (s, e) =>
                 {
-                    wallpaper.RenderWebViewAsync(); ;
+                    wallpaper.RenderWebViewAsync();
                 };
                 wallpaper.WallpaperReady += () =>
                 {
@@ -418,6 +419,7 @@ namespace webgl_fluid_wallpaper
             checkBox4.Checked = config.BloomEnabled;
             checkBox5.Checked = config.SunrayEnabled;
             checkBox6.Checked = config.audioVisualizerEnabled;
+            checkBox7.Checked = config.BackgroundImageEnabled;
 
             audioMonitorEnabled = config.audioVisualizerEnabled;
 
@@ -767,14 +769,63 @@ namespace webgl_fluid_wallpaper
             var config = LoadConfig();
             config.audioVisualizerEnabled = checkBox6.Checked;
             SaveConfig(config);
-
             audioMonitorEnabled = checkBox6.Checked;
-
             if (audioMonitorEnabled)
                 StartAudioMonitor();
             else
                 StopAudioMonitor();
         }
-    }
 
+        private void checkBox7_CheckedChanged(object sender, EventArgs e)
+        {
+            var config = LoadConfig();
+            config.BackgroundImageEnabled = checkBox7.Checked;
+            SaveConfig(config);
+            var message = new
+            {
+                action = "bgimage",
+                value = checkBox7.Checked
+            };
+            string json = JsonConvert.SerializeObject(message);
+            wallpaper?.UpdateWebView(json);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            Thread t = new Thread(() =>
+            {
+                OpenFileDialog dialog = new OpenFileDialog();
+                dialog.Title = "Select Background Image";
+                dialog.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp";
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        string sourcePath = dialog.FileName;
+                        string assetsFolder = Path.Combine(
+                            AppDomain.CurrentDomain.BaseDirectory,
+                            "Assets"
+                        );
+
+                        string targetPath = Path.Combine(assetsFolder, "wallpaper.png");
+                        if (!Directory.Exists(assetsFolder))
+                            Directory.CreateDirectory(assetsFolder);
+
+                        // convert to png cuz im making a set path in the webview script cuz easy
+                        using (Image img = Image.FromFile(sourcePath))
+                        {
+                            img.Save(targetPath, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        wallpaper?.UpdateWebView("{\"action\":\"reloadimage\"}");
+                    }
+                    catch (Exception ex)
+                    {
+                    }
+                }
+                dialog.Dispose();
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.Start();
+        }
+    }
 }

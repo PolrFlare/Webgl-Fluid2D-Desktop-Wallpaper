@@ -26,6 +26,7 @@ namespace webgl_fluid_wallpaper
         public float SunrayWeight { get; set; }
         public string BackgroundColor { get; set; }
         public bool audioVisualizerEnabled { get; set; }
+        public bool BackgroundImageEnabled { get; set; }
 
         // app only
         public bool StartWithWindows { get; set; } = false;
